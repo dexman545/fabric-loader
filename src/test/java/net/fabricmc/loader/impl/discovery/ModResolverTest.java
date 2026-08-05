@@ -153,6 +153,56 @@ public class ModResolverTest {
 	}
 
 	@Test
+	public void testOptionalJiJChangingModList() throws ModResolutionException, VersionParsingException {
+		ModCandidateImpl aMod = createMod("a", "1.0.0",
+				Arrays.asList(
+						new MV("aa", "2.0.0", new ModDependencyImpl(ModDependency.Kind.DEPENDS, "dd", Arrays.asList("1.x")))
+				),
+				Collections.emptyList());
+		ModCandidateImpl bMod = createMod("b", "2.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl cMod = createMod("c", "1.0.0", Arrays.asList(new MV("cc", "1.0.0")), Collections.emptyList());
+		ModCandidateImpl dMod = createMod("d", "1.0.0", Arrays.asList(
+					new MV("dd", "2.0.0"),
+					new MV("dd", "1.0.0")
+				),
+				Collections.emptyList());
+
+		List<ModCandidateImpl> modCandidates = new ArrayList<>();
+		discoverMod(modCandidates, aMod);
+		discoverMod(modCandidates, bMod);
+		discoverMod(modCandidates, cMod);
+		discoverMod(modCandidates, dMod);
+
+		Solution solution = solveMods(modCandidates);
+		Assertions.assertTrue(solution.isModLoaded("dd"));
+		Assertions.assertEquals(Version.parse("1.0.0"), solution.getVersion("dd"));
+
+		// Remake mods without the dependency
+		aMod = createMod("a", "1.0.0",
+				Arrays.asList(
+						new MV("aa", "2.0.0")
+				),
+				Collections.emptyList());
+		bMod = createMod("b", "2.0.0", Collections.emptyList(), Collections.emptyList());
+		cMod = createMod("c", "1.0.0", Arrays.asList(new MV("cc", "1.0.0")), Collections.emptyList());
+		dMod = createMod("d", "1.0.0", Arrays.asList(
+						new MV("dd", "2.0.0"),
+						new MV("dd", "1.0.0")
+				),
+				Collections.emptyList());
+
+		modCandidates = new ArrayList<>();
+		discoverMod(modCandidates, aMod);
+		discoverMod(modCandidates, bMod);
+		discoverMod(modCandidates, cMod);
+		discoverMod(modCandidates, dMod);
+
+		solution = solveMods(modCandidates);
+		Assertions.assertTrue(solution.isModLoaded("dd"));
+		Assertions.assertEquals(Version.parse("2.0.0"), solution.getVersion("dd"));
+	}
+
+	@Test
 	public void testCircular() throws ModResolutionException, VersionParsingException {
 		ModCandidateImpl aMod = createMod("a", "1.0.0", Collections.emptyList(),
 				Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "b", Arrays.asList("*"))));
