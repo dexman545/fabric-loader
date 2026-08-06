@@ -44,8 +44,10 @@ public class ModResolverTest {
 	@Test
 	public void testIncompatibleJiJNotLoaded() throws ModResolutionException, VersionParsingException {
 		ModDependency depOnC = new ModDependencyImpl(ModDependency.Kind.DEPENDS, "c", Arrays.asList("*"));
-		ModCandidateImpl aMod = createMod("a", "1.0.0", Arrays.asList(new MV("aa", "1.0.0", depOnC)), Collections.emptyList());
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "1.0.0").addDependency(depOnC)));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0")
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -58,8 +60,10 @@ public class ModResolverTest {
 	@Test
 	public void testIncompatibleJiJFailure() throws VersionParsingException {
 		ModDependency depOnC = new ModDependencyImpl(ModDependency.Kind.DEPENDS, "c", Arrays.asList("*"));
-		ModCandidateImpl aMod = createMod("a", "1.0.0", Arrays.asList(new MV("aa", "1.0.0", depOnC)), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList("*"))));
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "1.0.0").addDependency(depOnC))
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList("*"))));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0"));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -72,12 +76,12 @@ public class ModResolverTest {
 	public void testMultiVersionJiJ() throws ModResolutionException, VersionParsingException {
 		ModDependency depOnC = new ModDependencyImpl(ModDependency.Kind.DEPENDS, "c", Arrays.asList("*"));
 		ModDependency breakOnC = new ModDependencyImpl(ModDependency.Kind.BREAKS, "c", Arrays.asList("*"));
-		ModCandidateImpl aMod = createMod("a", "1.0.0",
-				Arrays.asList(
-						new MV("aa", "1.0.0", depOnC),
-						new MV("aa", "2.0.0", breakOnC)
-				), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList("*"))));
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "1.0.0").addDependency(depOnC))
+				.addNestedMod(MockV1ModMetadata.builder("aa", "2.0.0").addDependency(breakOnC))
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList("*"))));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0")
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -89,8 +93,8 @@ public class ModResolverTest {
 
 	@Test
 	public void testDuplicateRootMods() {
-		ModCandidateImpl aMod = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0"));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0"));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -102,15 +106,14 @@ public class ModResolverTest {
 
 	@Test
 	public void testRootOverrides() throws ModResolutionException, VersionParsingException {
-		ModCandidateImpl aMod = createMod("a", "1.0.0",
-				Arrays.asList(
-						new MV("aa", "2.0.0")
-				), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList("*"))));
-		ModCandidateImpl aMod2 = createMod("aa", "1.0.1", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "2.0.0"))
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList("*"))));
+		ModCandidateImpl aaMod = createMod(MockV1ModMetadata.builder("aa", "1.0.1"));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
-		discoverMod(modCandidates, aMod2);
+		discoverMod(modCandidates, aaMod);
 
 		Solution solution = solveMods(modCandidates);
 		Assertions.assertTrue(solution.isModLoaded("aa"));
@@ -119,15 +122,14 @@ public class ModResolverTest {
 
 	@Test
 	public void testJiJOverrides() throws ModResolutionException, VersionParsingException {
-		ModCandidateImpl aMod = createMod("a", "1.0.0",
-				Arrays.asList(
-						new MV("aa", "2.0.0")
-				), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList(">=2"))));
-		ModCandidateImpl aMod2 = createMod("aa", "1.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "2.0.0"))
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "aa", Arrays.asList(">=2"))));
+		ModCandidateImpl aaMod = createMod(MockV1ModMetadata.builder("aa", "1.0.0"));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
-		discoverMod(modCandidates, aMod2);
+		discoverMod(modCandidates, aaMod);
 
 		Solution solution = solveMods(modCandidates);
 		Assertions.assertTrue(solution.isModLoaded("aa"));
@@ -136,9 +138,10 @@ public class ModResolverTest {
 
 	@Test
 	public void testDuplicateRootModsOfDiffVers() throws ModResolutionException, VersionParsingException {
-		ModCandidateImpl aMod = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl aMod2 = createMod("a", "2.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0"));
+		ModCandidateImpl aMod2 = createMod(MockV1ModMetadata.builder("a", "2.0.0"));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0")
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -152,10 +155,10 @@ public class ModResolverTest {
 
 	@Test
 	public void testDuplicateRootModsOfDiffVersLowestCompat() throws ModResolutionException, VersionParsingException {
-		ModCandidateImpl aMod = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl aMod2 = createMod("a", "2.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(),
-				Arrays.asList(new ModDependencyImpl(ModDependency.Kind.BREAKS, "a", Arrays.asList(">=2.0.0"))));
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0"));
+		ModCandidateImpl aMod2 = createMod(MockV1ModMetadata.builder("a", "2.0.0"));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0")
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.BREAKS, "a", Arrays.asList(">=2.0.0"))));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -171,9 +174,8 @@ public class ModResolverTest {
 	@Test
 	public void testProvidedOverride() throws ModResolutionException, VersionParsingException {
 		// Same Version
-		ModCandidateImpl faker1 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
-				createModMetadata("faker", "1.0.0", Arrays.asList("a"), Collections.emptyList()), false, Collections.emptyList());
-		ModCandidateImpl aMod1 = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl faker1 = createMod(MockV1ModMetadata.builder("faker", "1.0.0").addProvides("a"));
+		ModCandidateImpl aMod1 = createMod(MockV1ModMetadata.builder("a", "1.0.0"));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, faker1);
@@ -185,9 +187,8 @@ public class ModResolverTest {
 		Assertions.assertTrue(solution.getContainer("a").getOriginUrl().toString().endsWith("faker.jar"));
 
 		// Provided greater version
-		ModCandidateImpl faker2 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
-				createModMetadata("faker", "2.0.0", Arrays.asList("a"), Collections.emptyList()), false, Collections.emptyList());
-		ModCandidateImpl aMod2 = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl faker2 = createMod(MockV1ModMetadata.builder("faker", "2.0.0").addProvides("a"));
+		ModCandidateImpl aMod2 = createMod(MockV1ModMetadata.builder("a", "1.0.0"));
 
 		modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, faker2);
@@ -199,9 +200,8 @@ public class ModResolverTest {
 		Assertions.assertTrue(solution.getContainer("a").getOriginUrl().toString().endsWith("faker.jar"));
 
 		// Provided lesser version
-		ModCandidateImpl faker3 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
-				createModMetadata("faker", "1.0.0", Arrays.asList("a"), Collections.emptyList()), false, Collections.emptyList());
-		ModCandidateImpl aMod3 = createMod("a", "2.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl faker3 = createMod(MockV1ModMetadata.builder("faker", "1.0.0").addProvides("a"));
+		ModCandidateImpl aMod3 = createMod(MockV1ModMetadata.builder("a", "2.0.0"));
 
 		modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, faker3);
@@ -213,12 +213,10 @@ public class ModResolverTest {
 		Assertions.assertTrue(solution.getContainer("a").getOriginUrl().toString().endsWith("faker.jar"));
 
 		// Provided conflicting version
-		ModCandidateImpl faker4 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
-				createModMetadata("faker", "1.0.0", Arrays.asList("a"),
-						Arrays.asList(new ModDependencyImpl(ModDependency.Kind.BREAKS, "b", Arrays.asList("*")))),
-				false, Collections.emptyList());
-		ModCandidateImpl aMod4 = createMod("a", "2.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl faker4 = createMod(MockV1ModMetadata.builder("faker", "1.0.0").addProvides("a")
+				.addDependency(new ModDependencyImpl(ModDependency.Kind.BREAKS, "b", Collections.singletonList("*"))));
+		ModCandidateImpl aMod4 = createMod(MockV1ModMetadata.builder("a", "2.0.0"));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "1.0.0"));
 
 		modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, faker4);
@@ -231,18 +229,15 @@ public class ModResolverTest {
 
 	@Test
 	public void testOptionalJiJChangingModList() throws ModResolutionException, VersionParsingException {
-		ModCandidateImpl aMod = createMod("a", "1.0.0",
-				Arrays.asList(
-						new MV("aa", "2.0.0", new ModDependencyImpl(ModDependency.Kind.DEPENDS, "dd", Arrays.asList("1.x")))
-				),
-				Collections.emptyList());
-		ModCandidateImpl bMod = createMod("b", "2.0.0", Collections.emptyList(), Collections.emptyList());
-		ModCandidateImpl cMod = createMod("c", "1.0.0", Arrays.asList(new MV("cc", "1.0.0")), Collections.emptyList());
-		ModCandidateImpl dMod = createMod("d", "1.0.0", Arrays.asList(
-					new MV("dd", "2.0.0"),
-					new MV("dd", "1.0.0")
-				),
-				Collections.emptyList());
+		ModCandidateImpl aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "2.0.0")
+						.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "dd", Arrays.asList("1.x")))));
+		ModCandidateImpl bMod = createMod(MockV1ModMetadata.builder("b", "2.0.0"));
+		ModCandidateImpl cMod = createMod(MockV1ModMetadata.builder("c", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("cc", "1.0.0")));
+		ModCandidateImpl dMod = createMod(MockV1ModMetadata.builder("d", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("dd", "2.0.0"))
+				.addNestedMod(MockV1ModMetadata.builder("dd", "1.0.0")));
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -255,18 +250,14 @@ public class ModResolverTest {
 		Assertions.assertEquals(Version.parse("1.0.0"), solution.getVersion("dd"));
 
 		// Remake mods without the dependency
-		aMod = createMod("a", "1.0.0",
-				Arrays.asList(
-						new MV("aa", "2.0.0")
-				),
-				Collections.emptyList());
-		bMod = createMod("b", "2.0.0", Collections.emptyList(), Collections.emptyList());
-		cMod = createMod("c", "1.0.0", Arrays.asList(new MV("cc", "1.0.0")), Collections.emptyList());
-		dMod = createMod("d", "1.0.0", Arrays.asList(
-						new MV("dd", "2.0.0"),
-						new MV("dd", "1.0.0")
-				),
-				Collections.emptyList());
+		aMod = createMod(MockV1ModMetadata.builder("a", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("aa", "2.0.0")));
+		bMod = createMod(MockV1ModMetadata.builder("b", "2.0.0"));
+		cMod = createMod(MockV1ModMetadata.builder("c", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("cc", "1.0.0")));
+		dMod = createMod(MockV1ModMetadata.builder("d", "1.0.0")
+				.addNestedMod(MockV1ModMetadata.builder("dd", "2.0.0"))
+				.addNestedMod(MockV1ModMetadata.builder("dd", "1.0.0")));
 
 		modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -281,12 +272,18 @@ public class ModResolverTest {
 
 	@Test
 	public void testCircular() throws ModResolutionException, VersionParsingException {
-		ModCandidateImpl aMod = createMod("a", "1.0.0", Collections.emptyList(),
-				Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "b", Arrays.asList("*"))));
-		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(),
-				Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "c", Arrays.asList("*"))));
-		ModCandidateImpl cMod = createMod("c", "1.0.0", Collections.emptyList(),
-				Arrays.asList(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*"))));
+		ModCandidateImpl aMod = createMod(
+				MockV1ModMetadata.builder("a", "1.0.0")
+						.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "b", Arrays.asList("*")))
+		);
+		ModCandidateImpl bMod = createMod(
+				MockV1ModMetadata.builder("b", "1.0.0")
+						.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "c", Arrays.asList("*")))
+		);
+		ModCandidateImpl cMod = createMod(
+				MockV1ModMetadata.builder("c", "1.0.0")
+						.addDependency(new ModDependencyImpl(ModDependency.Kind.DEPENDS, "a", Arrays.asList("*")))
+		);
 
 		List<ModCandidateImpl> modCandidates = new ArrayList<>();
 		discoverMod(modCandidates, aMod);
@@ -318,38 +315,24 @@ public class ModResolverTest {
 		return new Solution(modContainers, modCandidates);
 	}
 
-	private static ModCandidateImpl createMod(String id, String v, List<MV> mvs, Collection<ModDependency> dependencies) {
-		return createMod(id, v, true, mvs, dependencies);
+	private static ModCandidateImpl createMod(MockV1ModMetadata.Builder builder) {
+		return createMod(builder, true);
 	}
 
-	private static ModCandidateImpl createMod(String id, String v, boolean isRoot, List<MV> mvs, Collection<ModDependency> dependencies) {
-		Collection<ModCandidateImpl> nested = mvs.stream().map((mv) ->
-						ModCandidateImpl.createNested(mv.id+".jar", mv.id.hashCode(), createModMetadata(mv.id, mv.version, mv.dependencies),
-								false, Collections.emptyList()))
+	private static ModCandidateImpl createMod(MockV1ModMetadata.Builder builder, boolean isRoot) {
+		LoaderModMetadata metadata = builder.build();
+		Collection<ModCandidateImpl> nested = builder.getNestedMods().stream()
+				.map(nestedBuilder -> createMod(nestedBuilder, false))
 				.collect(Collectors.toList());
 
-		// If not root mod (eg in the mod folder, it does not have to load)
-		ModCandidateImpl mod = ModCandidateImpl.createPlain(isRoot ? Collections.singletonList(Paths.get(id + ".jar")) : null, createModMetadata(id, v, dependencies), false, nested);
+		ModCandidateImpl mod = ModCandidateImpl.createPlain(
+				isRoot ? Collections.singletonList(Paths.get(metadata.getId() + ".jar")) : null,
+				metadata, false, nested);
+
 		for (ModCandidateImpl modCandidate : nested) {
 			modCandidate.addParent(mod);
 		}
 		return mod;
-	}
-
-	private static LoaderModMetadata createModMetadata(String id, String v, Collection<ModDependency> deps) {
-		try {
-			return MockV1ModMetadata.create(id, Version.parse(v), deps);
-		} catch (VersionParsingException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private static LoaderModMetadata createModMetadata(String id, String v, Collection<String> provides, Collection<ModDependency> deps) {
-		try {
-			return MockV1ModMetadata.create(id, Version.parse(v), deps, provides);
-		} catch (VersionParsingException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	private static void discoverMod(List<ModCandidateImpl> mods, ModCandidateImpl modCandidate) {
@@ -412,26 +395,6 @@ public class ModResolverTest {
 
 				if (lastItem) lastItemOfNestLevel[nestLevel+1] = false;
 			}
-		}
-	}
-
-	private static class MV {
-		String id;
-		String version;
-		Collection<ModDependency> dependencies;
-
-		public MV(String id, String version) {
-			this(id, version, Collections.emptyList());
-		}
-
-		public MV(String id, String version, ModDependency... dependencies) {
-			this(id, version, Arrays.asList(dependencies));
-		}
-
-		public MV(String id, String version, Collection<ModDependency> dependencies) {
-			this.id = id;
-			this.version = version;
-			this.dependencies = dependencies;
 		}
 	}
 
