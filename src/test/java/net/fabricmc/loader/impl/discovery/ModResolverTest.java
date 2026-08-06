@@ -297,10 +297,11 @@ public class ModResolverTest {
 	private static Solution solveMods(List<ModCandidateImpl> modCandidates) throws ModResolutionException {
 		modCandidates = ModResolver.resolve(modCandidates, EnvType.CLIENT, Collections.emptyMap());
 
+		// See net.fabricmc.loader.impl.FabricLoaderImpl#setup
 		List<ModContainerImpl> modContainers = modCandidates.stream()
 				.peek(modCandidate -> {
-					if (!modCandidate.hasPath()) {
-						modCandidate.setPaths(Arrays.asList(Paths.get(modCandidate.getId() + ".jar")));
+					if (!modCandidate.hasPath() && !modCandidate.isBuiltin()) {
+						modCandidate.setPaths(Collections.singletonList(Paths.get(modCandidate.getId() + ".jar")));
 					}
 				})
 				.map(ModContainerImpl::new)
@@ -332,11 +333,13 @@ public class ModResolverTest {
 		for (ModCandidateImpl modCandidate : nested) {
 			modCandidate.addParent(mod);
 		}
+
 		return mod;
 	}
 
 	private static void discoverMod(List<ModCandidateImpl> mods, ModCandidateImpl modCandidate) {
 		mods.add(modCandidate);
+
 		for (ModCandidateImpl nestedMod : modCandidate.getNestedMods()) {
 			discoverMod(mods, nestedMod);
 		}
@@ -402,7 +405,7 @@ public class ModResolverTest {
 		List<ModContainerImpl> containers;
 		List<ModCandidateImpl> candidates;
 
-		public Solution(List<ModContainerImpl> containers, List<ModCandidateImpl> candidates) {
+		Solution(List<ModContainerImpl> containers, List<ModCandidateImpl> candidates) {
 			this.containers = containers;
 			this.candidates = candidates;
 		}
@@ -412,6 +415,7 @@ public class ModResolverTest {
 				if (container.getMetadata().getId().equals(id)) {
 					return true;
 				}
+
 				for (String provides : container.getMetadata().getProvides()) {
 					if (provides.equals(id)) {
 						return true;
@@ -427,6 +431,7 @@ public class ModResolverTest {
 				if (container.getMetadata().getId().equals(id)) {
 					return container.getMetadata().getVersion();
 				}
+
 				for (String provides : container.getMetadata().getProvides()) {
 					if (provides.equals(id)) {
 						return container.getMetadata().getVersion();
@@ -442,6 +447,7 @@ public class ModResolverTest {
 				if (container.getMetadata().getId().equals(id)) {
 					return container;
 				}
+
 				for (String provides : container.getMetadata().getProvides()) {
 					if (provides.equals(id)) {
 						return container;

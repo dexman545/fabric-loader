@@ -19,7 +19,6 @@ package net.fabricmc.loader.impl.metadata;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 import net.fabricmc.loader.api.Version;
 import net.fabricmc.loader.api.VersionParsingException;
@@ -84,13 +83,13 @@ public class MockV1ModMetadata {
 			return this;
 		}
 
+		public Collection<Builder> getNestedMods() {
+			return nested;
+		}
+
 		public Builder setNestedMods(Collection<Builder> nested) {
 			this.nested = nested;
 			return this;
-		}
-
-		public Collection<Builder> getNestedMods() {
-			return nested;
 		}
 
 		public Builder setName(String name) {
@@ -105,6 +104,4 @@ public class MockV1ModMetadata {
 					Collections.emptyMap(), Collections.emptyMap());
 		}
 	}
-
-
 }
