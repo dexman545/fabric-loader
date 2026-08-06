@@ -169,6 +169,67 @@ public class ModResolverTest {
 	}
 
 	@Test
+	public void testProvidedOverride() throws ModResolutionException, VersionParsingException {
+		// Same Version
+		ModCandidateImpl faker1 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
+				createModMetadata("faker", "1.0.0", Arrays.asList("a"), Collections.emptyList()), false, Collections.emptyList());
+		ModCandidateImpl aMod1 = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
+
+		List<ModCandidateImpl> modCandidates = new ArrayList<>();
+		discoverMod(modCandidates, faker1);
+		discoverMod(modCandidates, aMod1);
+
+		Solution solution = solveMods(modCandidates);
+		Assertions.assertTrue(solution.isModLoaded("a"));
+		Assertions.assertEquals(Version.parse("1.0.0"), solution.getVersion("a"));
+		Assertions.assertTrue(solution.getContainer("a").getOriginUrl().toString().endsWith("faker.jar"));
+
+		// Provided greater version
+		ModCandidateImpl faker2 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
+				createModMetadata("faker", "2.0.0", Arrays.asList("a"), Collections.emptyList()), false, Collections.emptyList());
+		ModCandidateImpl aMod2 = createMod("a", "1.0.0", Collections.emptyList(), Collections.emptyList());
+
+		modCandidates = new ArrayList<>();
+		discoverMod(modCandidates, faker2);
+		discoverMod(modCandidates, aMod2);
+
+		solution = solveMods(modCandidates);
+		Assertions.assertTrue(solution.isModLoaded("a"));
+		Assertions.assertEquals(Version.parse("2.0.0"), solution.getVersion("a"));
+		Assertions.assertTrue(solution.getContainer("a").getOriginUrl().toString().endsWith("faker.jar"));
+
+		// Provided lesser version
+		ModCandidateImpl faker3 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
+				createModMetadata("faker", "1.0.0", Arrays.asList("a"), Collections.emptyList()), false, Collections.emptyList());
+		ModCandidateImpl aMod3 = createMod("a", "2.0.0", Collections.emptyList(), Collections.emptyList());
+
+		modCandidates = new ArrayList<>();
+		discoverMod(modCandidates, faker3);
+		discoverMod(modCandidates, aMod3);
+
+		solution = solveMods(modCandidates);
+		Assertions.assertTrue(solution.isModLoaded("a"));
+		Assertions.assertEquals(Version.parse("1.0.0"), solution.getVersion("a"));
+		Assertions.assertTrue(solution.getContainer("a").getOriginUrl().toString().endsWith("faker.jar"));
+
+		// Provided conflicting version
+		ModCandidateImpl faker4 = ModCandidateImpl.createPlain(Collections.singletonList(Paths.get("faker.jar")),
+				createModMetadata("faker", "1.0.0", Arrays.asList("a"),
+						Arrays.asList(new ModDependencyImpl(ModDependency.Kind.BREAKS, "b", Arrays.asList("*")))),
+				false, Collections.emptyList());
+		ModCandidateImpl aMod4 = createMod("a", "2.0.0", Collections.emptyList(), Collections.emptyList());
+		ModCandidateImpl bMod = createMod("b", "1.0.0", Collections.emptyList(), Collections.emptyList());
+
+		modCandidates = new ArrayList<>();
+		discoverMod(modCandidates, faker4);
+		discoverMod(modCandidates, aMod4);
+		discoverMod(modCandidates, bMod);
+
+		List<ModCandidateImpl> finalModCandidates = modCandidates;
+		Assertions.assertThrows(ModResolutionException.class, () -> solveMods(finalModCandidates));
+	}
+
+	@Test
 	public void testOptionalJiJChangingModList() throws ModResolutionException, VersionParsingException {
 		ModCandidateImpl aMod = createMod("a", "1.0.0",
 				Arrays.asList(
@@ -283,6 +344,14 @@ public class ModResolverTest {
 		}
 	}
 
+	private static LoaderModMetadata createModMetadata(String id, String v, Collection<String> provides, Collection<ModDependency> deps) {
+		try {
+			return MockV1ModMetadata.create(id, Version.parse(v), deps, provides);
+		} catch (VersionParsingException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
 	private static void discoverMod(List<ModCandidateImpl> mods, ModCandidateImpl modCandidate) {
 		mods.add(modCandidate);
 		for (ModCandidateImpl nestedMod : modCandidate.getNestedMods()) {
@@ -380,6 +449,11 @@ public class ModResolverTest {
 				if (container.getMetadata().getId().equals(id)) {
 					return true;
 				}
+				for (String provides : container.getMetadata().getProvides()) {
+					if (provides.equals(id)) {
+						return true;
+					}
+				}
 			}
 
 			return false;
@@ -389,6 +463,26 @@ public class ModResolverTest {
 			for (ModContainerImpl container : containers) {
 				if (container.getMetadata().getId().equals(id)) {
 					return container.getMetadata().getVersion();
+				}
+				for (String provides : container.getMetadata().getProvides()) {
+					if (provides.equals(id)) {
+						return container.getMetadata().getVersion();
+					}
+				}
+			}
+
+			return null;
+		}
+
+		ModContainerImpl getContainer(String id) {
+			for (ModContainerImpl container : containers) {
+				if (container.getMetadata().getId().equals(id)) {
+					return container;
+				}
+				for (String provides : container.getMetadata().getProvides()) {
+					if (provides.equals(id)) {
+						return container;
+					}
 				}
 			}
 

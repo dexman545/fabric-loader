@@ -30,4 +30,11 @@ public class MockV1ModMetadata {
 				Collections.emptyList(), Collections.emptyList(), null, Collections.emptyList(), null,
 				Collections.emptyMap(), Collections.emptyMap());
 	}
+
+	public static LoaderModMetadata create(String id, Version version, Collection<ModDependency> dependencies, Collection<String> provides) {
+		return new V1ModMetadata(id, version, provides, ModEnvironment.UNIVERSAL, Collections.emptyMap(), Collections.emptyList(),
+				Collections.emptyList(), null, dependencies, false, id.toUpperCase(), null,
+				Collections.emptyList(), Collections.emptyList(), null, Collections.emptyList(), null,
+				Collections.emptyMap(), Collections.emptyMap());
+	}
 }
