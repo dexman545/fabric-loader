@@ -166,7 +166,6 @@ public class ModResolverTest {
 		discoverMod(modCandidates, bMod);
 
 		Solution solution = solveMods(modCandidates);
-		//dumpModList(solution.candidates);
 		Assertions.assertTrue(solution.isModLoaded("b"));
 		Assertions.assertEquals(Version.parse("1.0.0"), solution.getVersion("b"));
 	}
